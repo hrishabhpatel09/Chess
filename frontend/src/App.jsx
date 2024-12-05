@@ -8,7 +8,7 @@ import { SOCKET_EVENTS } from "./socketEvents";
 const App = () => {
   //! Sokcet configuration
   let socket = useMemo(()=>{
-    let socket = io('http://localhost:8000');
+    let socket = io(import.meta.env.VITE_BACKEND_URL);
 
     socket.on(SOCKET_EVENTS.CONNECT,()=>{
       console.log('Socket connected Successfully')

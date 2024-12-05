@@ -3,6 +3,8 @@ import express from 'express'
 import {createServer} from 'http'
 import { Chess } from 'chess.js';
 import { Response } from "./src/utils.js";
+import dotenv from "dotenv"
+dotenv.config({path: './.env'});
 
 const app = express();
 const server = createServer(app);
@@ -96,6 +98,7 @@ io.on('connection', (socket)=>{
 });
 
 app.get('/',(req,res)=>res.send("hi"))
-server.listen(8000, ()=>{
-    console.log(`Server lsitening on port ${8000}`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, ()=>{
+    console.log(`Server lsitening on port ${PORT}`);
 })
