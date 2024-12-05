@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "dev": "nodemon ./index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "chess.js": "^1.0.0-beta.8",
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.0"
+  }
+}
