@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "dev": "nodemon ./index.js"
+    "build": "echo 'No build step required for a simple JS project'",
+    "dev": "node ./index.js"
   },
   "type": "module",
   "dependencies": {
