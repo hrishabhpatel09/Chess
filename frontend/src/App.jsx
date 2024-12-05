@@ -1,55 +1,72 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { parseFEN } from "./Components/ChessBoard";
 import ChessBoard from "./Components/ChessBoard";
 import Button from "./Components/Button";
-import {io, Socket} from "socket.io-client"
+import {io} from "socket.io-client"
+import { SOCKET_EVENTS } from "./socketEvents";
 
 const App = () => {
-  // Sokcet configuration
-  let sokcet = useMemo(()=>{
-    return io('http://localhost:8000')
+  //! Sokcet configuration
+  let socket = useMemo(()=>{
+    let socket = io('http://localhost:8000');
+
+    socket.on(SOCKET_EVENTS.CONNECT,()=>{
+      console.log('Socket connected Successfully')
+    })
+    socket.on(SOCKET_EVENTS.MESSAGE,(payload)=>{
+      console.log(payload)
+    })
+    socket.on(SOCKET_EVENTS.CHANGE,(response)=>{
+      const {FEN} = response.body;
+      if(FEN==""){
+        setBoard(parseFEN(fen));
+        return;
+      }
+      if(response.body.isCheck){
+        let activePlayer = whoseMoveIsThere(FEN);
+        if(activePlayer=='b'){
+          setIsBlackChecked(true);
+        }else{
+          setIsWhiteChecked(true);
+        }
+      }else{
+        setIsBlackChecked(false);
+        setIsWhiteChecked(false);
+      }
+      setFEN(FEN);
+      setBoard(parseFEN(FEN));
+    })
+
+    socket.on(SOCKET_EVENTS.GAME_INITIATED,(response)=>{
+      console.log(response)
+      setOwner(response.message.color)
+    })
+
+    socket.on(SOCKET_EVENTS.DISCONNECT, () => {
+      console.warn('Socket disconnected. Attempting to reconnect...');
+    });
+    return socket;
   },[]);
-  sokcet.on('connect',()=>{
-    console.log('Socket connected Successfully')
-  })
-  sokcet.on('message',(payload)=>{
-    console.log(payload)
-  })
+
+  // Cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      socket.disconnect();
+      console.log('Socket disconnected on component unmount.');
+    };
+  }, [socket]);
+  //* This function fetches FEN and derive whose player move is this
   const whoseMoveIsThere = (FEN) =>{
-    const move = FEN.split(' ')[1];
-    console.log(move);
+    let move = FEN.split(' ')[1];
     return move;
   }
-  sokcet.on('change',(response)=>{
-    const {FEN} = response.body;
-    if(FEN==""){
-      setBoard(parseFEN(fen));
-      return;
-    }
-    if(response.body.isCheck){
-      let activePlayer = whoseMoveIsThere(FEN);
-      if(activePlayer=='b'){
-        setIsBlackChecked(true);
-      }else{
-        setIsWhiteChecked(true);
-      }
-    }else{
-      setIsBlackChecked(false);
-      setIsWhiteChecked(false);
-    }
-    setFEN(FEN);
-    setBoard(parseFEN(FEN));
-  })
-  sokcet.on("game_initiated",(response)=>{
-    console.log(response)
-    setOwner(response.message.color)
-  })
-
-
+  //* States Variables
   const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2';
   const [fen, setFEN] = useState(initialFEN);
   const [board, setBoard] = useState(parseFEN(initialFEN));
   const [owner, setOwner] = useState("");
+  const [isWhiteChecked,setIsWhiteChecked] =useState(false);
+  const [isBlackChecked,setIsBlackChecked] =useState(false);
 
   const handleFENChange = (event) => {
     const newFEN = event.target.value;
@@ -61,11 +78,9 @@ const App = () => {
     let fromNumber = 8 - fromRow;
     let toFile = String.fromCharCode('a'.charCodeAt(0) + toCol);
     let toNumber = 8 - toRow;
-    let piece = board[fromRow][fromCol];
     let from = fromFile+fromNumber;
     let to = toFile+toNumber;
-
-    sokcet.emit('move',{from: from,to: to});
+    socket.emit('move',{from: from,to: to});
   }
   const handlePieceMove = (fromRow, fromCol, toRow, toCol) => {
     ExecuteMove(fromRow,fromCol,toRow,toCol);
@@ -78,21 +93,14 @@ const App = () => {
 
   const startGame = () =>{
     try {
-      sokcet.emit('start_game',{});
+      socket.emit('start_game',{});
     } catch (error) {
       console.log('Error Starting the game')
     }
   }
-
-   const [count,setCount] = useState(0);
-   const [isWhiteChecked,setIsWhiteChecked] =useState(false);
-   const [isBlackChecked,setIsBlackChecked] =useState(false);
-   
   return (
     <div className="flex flex-col justify-center items-center h-screen space-y-4">
-      {/* Chessboard */}
       <ChessBoard owner={owner} board={board} setBoard={setBoard} isBlackChecked={isBlackChecked} isWhiteChecked={isWhiteChecked} onPieceMove={handlePieceMove} />
-      <h2>{count}</h2>
       <Button text={"Start game"} onClick={startGame} />
     </div>
   );
