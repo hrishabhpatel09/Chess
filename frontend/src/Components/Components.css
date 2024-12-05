@@ -1,0 +1,13 @@
+.start-btn:hover{
+    color: white;
+    scale: 1.05;
+    background-color: #769656;
+}
+.start-btn:active{
+    scale: 0.98;
+}
+.start-btn{
+    background-color: #81b64c;
+    transition: all 0.1s ease;
+    color: white;
+}
