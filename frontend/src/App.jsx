@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { parseFEN } from "./Components/ChessBoard";
 import ChessBoard from "./Components/ChessBoard";
 import Button from "./Components/Button";
@@ -107,13 +107,13 @@ const App = () => {
     setBoard(newBoard);
   };
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     try {
       socket.emit('start_game', {});
     } catch (error) {
       console.log('Error Starting the game');
     }
-  };
+  },[]);
 
   return (
     <div className="flex flex-col justify-center items-center h-screen space-y-4">
