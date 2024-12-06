@@ -72,7 +72,7 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
 }, [owner, hasFlipped, board]);
 
   return (
-    <div className={`h-[600px] w-[600px] grid grid-cols-8 grid-rows-8 rounded-sm ${owner=='b'?'rotate-180':''}`}>
+    <div className={`sm:h-[600px] sm:w-[600px] grid grid-cols-8 grid-rows-8 rounded-sm ${owner=='b'?'rotate-180':''}`}>
       {board.map((row, rowIndex) =>
         row.map((piece, colIndex) => (
           <div

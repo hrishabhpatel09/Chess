@@ -116,7 +116,7 @@ const App = () => {
   },[]);
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen space-y-4">
+    <div className="flex flex-col sm:flex-row mt-10 sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4">
       <ChessBoard
         owner={owner}
         board={board}
@@ -125,7 +125,9 @@ const App = () => {
         isWhiteChecked={isWhiteChecked}
         onPieceMove={handlePieceMove}
       />
-      <Button text={"Start game"} onClick={startGame} />
+      <div>
+         <Button text={"Start game"} onClick={startGame} />
+      </div>
     </div>
   );
 };
