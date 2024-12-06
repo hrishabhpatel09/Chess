@@ -87,9 +87,11 @@ io.on('connection', (socket)=>{
             return;
         }
         const response = await game.makeMove(from,to);
-        console.log(response)
-        io.emit('change',response)
+        let previousMove = {};
+        previousMove = {fromRow: Number(from[1])-1, fromCol: from.charCodeAt(0)-97, toRow: Number(to[1])-1, toCol: to.charCodeAt(0)-97}
+        io.emit('change',{response,previousMove})
     })
+    
     socket.on('message', (msg)=>{
         console.log(msg);
     })
