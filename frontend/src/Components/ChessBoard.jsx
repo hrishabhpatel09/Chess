@@ -30,7 +30,7 @@ export const parseFEN = (fen) => {
   return board;
 };
 
-const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhiteChecked}) => {
+const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhiteChecked, previousMove}) => {
   const getSquareColor = (row, col) =>
     (row + col) % 2 === 0 ? 'bg-[#EEEED2]' : 'bg-[#769656]';
 
@@ -70,14 +70,13 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
     setHasFlipped(true); // Mark flip as completed.
   }
 }, [owner, hasFlipped, board]);
-
   return (
     <div className={`sm:h-[600px] sm:w-[600px] grid grid-cols-8 grid-rows-8 rounded-sm ${owner=='b'?'rotate-180':''}`}>
       {board.map((row, rowIndex) =>
         row.map((piece, colIndex) => (
           <div
             key={`${rowIndex}-${colIndex}`}
-            className={`w-full h-full ${getSquareColor(rowIndex, colIndex)} ${isBlackChecked && piece==='k' ?'bg-red-400':''} ${isWhiteChecked && piece==='K'?'bg-red-400':''}`}
+            className={`w-full h-full ${getSquareColor(rowIndex, colIndex)} ${isBlackChecked && piece==='k' ?'bg-red-400':''} ${isWhiteChecked && piece==='K'?'bg-red-400':''} ${((rowIndex==7-previousMove.fromRow && colIndex==previousMove.fromCol)||(rowIndex==7-previousMove.toRow && colIndex==previousMove.toCol))?'bg-yellow-200':''}`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
           >

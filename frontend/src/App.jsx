@@ -16,7 +16,7 @@ const App = () => {
     socket.on(SOCKET_EVENTS.MESSAGE, (payload) => {
       console.log(payload);
     });
-    socket.on(SOCKET_EVENTS.CHANGE, (response) => {
+    socket.on(SOCKET_EVENTS.CHANGE, ({response, previousMove}) => {
       const { FEN } = response.body;
       console.log(response);
       if (FEN === "") {
@@ -37,6 +37,8 @@ const App = () => {
         setIsWhiteChecked(false);
       }
       setFEN(FEN);
+      console.log(previousMove)
+      setPreviousMove(previousMove)
       setBoard(parseFEN(FEN));
     });
 
@@ -73,6 +75,7 @@ const App = () => {
   const [owner, setOwner] = useState("");
   const [isWhiteChecked, setIsWhiteChecked] = useState(false);
   const [isBlackChecked, setIsBlackChecked] = useState(false);
+  const [previousMove, setPreviousMove] = useState({fromRow: -1,fromCol: -1,toRow: -1, toCol: -1});
 
   // Create a ref to persist the previous `fen` value
   const fenRef = useRef(fen);
@@ -124,6 +127,7 @@ const App = () => {
         isBlackChecked={isBlackChecked}
         isWhiteChecked={isWhiteChecked}
         onPieceMove={handlePieceMove}
+        previousMove={previousMove}
       />
       <div>
          <Button text={"Start game"} onClick={startGame} />
