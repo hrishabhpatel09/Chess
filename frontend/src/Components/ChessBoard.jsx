@@ -31,6 +31,7 @@ export const parseFEN = (fen) => {
 };
 const moveSelfSound = new Audio("/move-self.mp3");
 const captureAudo = new Audio("/capture.mp3");
+const wrongMoveAudio = new Audio("/illegal.mp3");
 const playMoveAudio = () =>{
   moveSelfSound.play();
 }
@@ -64,23 +65,34 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
   const handleDragOver = (e) => {
     e.preventDefault(); // Allows the drop event to occur
   };
-  const [hasFlipped, setHasFlipped] = useState(false);
-
-  useEffect(() => {
-  if (owner === "b" && !hasFlipped) {
-    const newBoard = board.map(row => [...row]);
-
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 8; j++) {
-        newBoard[i][j] = board[7 - i][7 - j];
-      }
-    }
-
-    setBoard(newBoard);
-    setHasFlipped(true); // Mark flip as completed.
-  }
-}, [owner, hasFlipped, board]);
   console.log("got rendered again chaess")
+  let selectedSquare = null;
+  const isUppercase = (word) =>{
+    if(word>='A' && word<='Z')return true;
+    else if(word>='a' && word<='z')false;
+    else return false;
+  }
+  const isLowerCase = (word) =>{
+    if(word>='a' && word<='z')return true;
+    else return false;
+  }
+  const handleClick = (row,col) =>{
+    if(selectedSquare == null){
+      selectedSquare = {
+        row: row,
+        col: col
+      }
+    }else{
+      if(isUppercase(board[row][col]) && isUppercase(board[selectedSquare.row][selectedSquare.col])||isLowerCase(board[row][col]) && isLowerCase(board[selectedSquare.row][selectedSquare.col])){
+        selectedSquare = null;
+        wrongMoveAudio.play();
+        return;
+      }
+      else if(board[row][col] == null)playMoveAudio();
+      else playCaptureAudio();
+      onPieceMove(selectedSquare.row, selectedSquare.col, row,col)
+    }
+  }
   return (
     <div className={`sm:h-[600px] sm:w-[600px] grid grid-cols-8 grid-rows-8 rounded-sm ${owner=='b'?'rotate-180':''}`}>
       {board.map((row, rowIndex) =>
@@ -90,6 +102,7 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
             className={`w-full h-full ${getSquareColor(rowIndex, colIndex)} ${isBlackChecked && piece==='k' ?'bg-red-400':''} ${isWhiteChecked && piece==='K'?'bg-red-400':''} ${((rowIndex==7-previousMove.fromRow && colIndex==previousMove.fromCol)||(rowIndex==7-previousMove.toRow && colIndex==previousMove.toCol))?'bg-yellow-200':''}`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
+            onClick={(e)=>{handleClick(rowIndex,colIndex)}}
           >
             {piece && (
               <img
