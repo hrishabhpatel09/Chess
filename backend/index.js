@@ -19,12 +19,12 @@ class Game {
         this.time = Date.now();             // Game start time
         this.chess = new Chess();          // Chess board instance
         this.winner = null;
+        this.roomId = player1+"salt"+player2; // room id
     }
 
     makeMove(from,to) {
         try {
             const result = this.chess.move({from,to});
-            console.log(this.chess.ascii());
             if (!result) {
                 return new Response(false, 'Invalid move', false, false,false,"");
             }
@@ -55,6 +55,8 @@ class GameManager {
 
     initialize(player1, player2) {
         const game = new Game(player1, player2);
+        io.sockets.sockets.get(player1).join(game.roomId);
+        io.sockets.sockets.get(player2).join(game.roomId);
         this.games.push(game);
         return game;
     }
@@ -65,8 +67,12 @@ class GameManager {
 }
 
 const gameManager = new GameManager();
-
+let onlinePlayers = 0;
+io.disconnectSockets(true);
 io.on('connection', (socket)=>{
+    onlinePlayers++;
+    console.log(onlinePlayers)
+    io.emit("online",onlinePlayers);
     console.log('new Socket connected ', socket.id);
     socket.on('start_game',(payload)=>{
         if (queue.length === 0) {
@@ -89,13 +95,16 @@ io.on('connection', (socket)=>{
         const response = await game.makeMove(from,to);
         let previousMove = {};
         previousMove = {fromRow: Number(from[1])-1, fromCol: from.charCodeAt(0)-97, toRow: Number(to[1])-1, toCol: to.charCodeAt(0)-97}
-        io.emit('change',{response,previousMove})
+        io.to(game.roomId).emit('change',{response,previousMove})
     })
     
     socket.on('message', (msg)=>{
         console.log(msg);
     })
     socket.on('disconnect', ()=> {
+        onlinePlayers--;
+        if(queue.at(0)==socket.id)queue.pop();
+        io.emit("online",onlinePlayers);
         console.log(`Socket discoonnected ${socket.id}`);
     });
 });

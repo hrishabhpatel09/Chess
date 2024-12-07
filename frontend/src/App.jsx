@@ -4,7 +4,12 @@ import ChessBoard from "./Components/ChessBoard";
 import Button from "./Components/Button";
 import { io } from "socket.io-client";
 import { SOCKET_EVENTS } from "./socketEvents";
+import onlineDot from "../public/online.png"
 
+let gameEndSound = new Audio("/game-end.webm");
+const playGameEnd = () =>{
+  gameEndSound.play();
+}
 const App = () => {
   //! Socket configuration
   let socket = useMemo(() => {
@@ -25,7 +30,10 @@ const App = () => {
         setBoard(parseFEN(fenRef.current));
         return;
       }
-      if (response.body.isCheck) {
+      if(response.body.isCheckmate){
+        playGameEnd();
+      }
+      if(response.body.isCheck) {
         let activePlayer = whoseMoveIsThere(FEN);
         if (activePlayer === 'b') {
           setIsBlackChecked(true);
@@ -44,21 +52,33 @@ const App = () => {
 
     socket.on(SOCKET_EVENTS.GAME_INITIATED, (response) => {
       console.log(response);
+      setWaitingForAnotherPlayer(false);
       setOwner(response.message.color);
     });
 
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
       console.warn('Socket disconnected. Attempting to reconnect...');
     });
+    socket.on(SOCKET_EVENTS.ONLINE_PLAYERS, (count)=>{
+      setOnlinePlayersCount(count);
+    })
 
     return socket;
   }, []);
 
-  // Cleanup when component unmounts
+  //Cleanup of Sockets
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      socket.disconnect();
+      console.log("Socket disconnected on window close.");
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       socket.disconnect();
-      console.log('Socket disconnected on component unmount.');
+      console.log("Socket disconnected on component unmount.");
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [socket]);
 
@@ -76,6 +96,8 @@ const App = () => {
   const [isWhiteChecked, setIsWhiteChecked] = useState(false);
   const [isBlackChecked, setIsBlackChecked] = useState(false);
   const [previousMove, setPreviousMove] = useState({fromRow: -1,fromCol: -1,toRow: -1, toCol: -1});
+  const [onlinePlayersCount, setOnlinePlayersCount] = useState(0);
+  const [waitingForAnotherPlayer, setWaitingForAnotherPlayer] = useState(false);
 
   // Create a ref to persist the previous `fen` value
   const fenRef = useRef(fen);
@@ -113,13 +135,15 @@ const App = () => {
   const startGame = useCallback(() => {
     try {
       socket.emit('start_game', {});
+      setWaitingForAnotherPlayer(true);
     } catch (error) {
+      setWaitingForAnotherPlayer(false);
       console.log('Error Starting the game');
     }
   },[]);
 
   return (
-    <div className="flex flex-col sm:flex-row mt-10 sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4">
+    <div className="flex flex-col sm:flex-row sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4">
       <ChessBoard
         owner={owner}
         board={board}
@@ -129,11 +153,26 @@ const App = () => {
         onPieceMove={handlePieceMove}
         previousMove={previousMove}
       />
-      <div>
-         <Button text={"Start game"} onClick={startGame} />
-      </div>
+      <GameControllers online={onlinePlayersCount} isWaiting={waitingForAnotherPlayer} onStart={startGame}/>
     </div>
   );
 };
 
+function GameControllers({online,isWaiting,onStart}){
+  return (
+    <div className="h-[600px] w-[380px] bg-[#262521] rounded-sm flex flex-col mt-0 p-4 gap-6 items-center justify-between">
+      <OnlineCouner online={online}/>
+      <Button text={isWaiting?"Waiting...":"Start game"} disabled={isWaiting?true:false} onClick={onStart} />
+    </div>
+  )
+}
+
+function OnlineCouner({online}){
+  return (
+    <div className="flex justify-center gap-1">
+      <img src={onlineDot} alt="online-logo" className="h-6 w-6"/>
+      <span className="text-center ">Online : {online}</span>
+    </div>
+  )
+}
 export default App;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 
 
 /* 
@@ -29,7 +29,14 @@ export const parseFEN = (fen) => {
   });
   return board;
 };
-
+const moveSelfSound = new Audio("/move-self.mp3");
+const captureAudo = new Audio("/capture.mp3");
+const playMoveAudio = () =>{
+  moveSelfSound.play();
+}
+const playCaptureAudio = () =>{
+  captureAudo.play();
+}
 const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhiteChecked, previousMove}) => {
   const getSquareColor = (row, col) =>
     (row + col) % 2 === 0 ? 'bg-[#EEEED2]' : 'bg-[#769656]';
@@ -48,6 +55,9 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
     const fromRow = parseInt(e.dataTransfer.getData('fromRow'), 10);
     const fromCol = parseInt(e.dataTransfer.getData('fromCol'), 10);
     onPieceMove(fromRow, fromCol, toRow, toCol);
+    console.log(board)
+    if(board[toRow][toCol] == null)playMoveAudio();
+    else playCaptureAudio();
     detectMove(fromRow, fromCol, toRow, toCol);
   };
 
@@ -70,6 +80,7 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
     setHasFlipped(true); // Mark flip as completed.
   }
 }, [owner, hasFlipped, board]);
+  console.log("got rendered again chaess")
   return (
     <div className={`sm:h-[600px] sm:w-[600px] grid grid-cols-8 grid-rows-8 rounded-sm ${owner=='b'?'rotate-180':''}`}>
       {board.map((row, rowIndex) =>
@@ -100,4 +111,4 @@ const ChessBoard = ({ board,setBoard, onPieceMove, owner, isBlackChecked, isWhit
   );
 };
 
-export default ChessBoard
+export default memo(ChessBoard)

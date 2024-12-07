@@ -6,4 +6,5 @@ export const SOCKET_EVENTS = {
     CHANGE: "change",
     GAME_INITIATED: "game_initiated",
     MESSAGE: "message",
+    ONLINE_PLAYERS: "online"
 };
