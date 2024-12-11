@@ -1,71 +1,75 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { parseFEN } from "./Components/ChessBoard";
 import ChessBoard from "./Components/ChessBoard";
 import Button from "./Components/Button";
 import { io } from "socket.io-client";
 import { SOCKET_EVENTS } from "./socketEvents";
-import onlineDot from "../public/online.png"
+import onlineDot from "/online.png"
+import { useDispatch, useSelector } from "react-redux";
+import {setBoard, setPreviousMoves, toggleTurn, setCheck} from "./redux/boardSlice.js";
+import {parseFEN} from "./utils/parseFEN.js"
 
-let gameEndSound = new Audio("/game-end.webm");
-const playGameEnd = () =>{
-  gameEndSound.play();
-}
+let socket = null;
 const App = () => {
-  //! Socket configuration
-  let socket = useMemo(() => {
-    let socket = io(import.meta.env.VITE_BACKEND_URL);
+  //* States Variables
+  const [owner, setOwner] = useState("");
+  const [isWhiteChecked, setIsWhiteChecked] = useState(false);
+  const [isBlackChecked, setIsBlackChecked] = useState(false);
+  const [onlinePlayersCount, setOnlinePlayersCount] = useState(0);
+  const [waitingForAnotherPlayer, setWaitingForAnotherPlayer] = useState(false);
+  const dispatch = useDispatch();
+  const previousMoves = useSelector((state)=>state.board.previousMoves);
 
-    socket.on(SOCKET_EVENTS.CONNECT, () => {
-      console.log('Socket connected Successfully');
-    });
-    socket.on(SOCKET_EVENTS.MESSAGE, (payload) => {
-      console.log(payload);
-    });
-    socket.on(SOCKET_EVENTS.CHANGE, ({response, previousMove}) => {
-      const { FEN } = response.body;
-      console.log(response);
-      if (FEN === "") {
-        // Use the previous FEN from useRef to set the board
-        console.log(fenRef.current);
-        setBoard(parseFEN(fenRef.current));
-        return;
-      }
-      if(response.body.isCheckmate){
-        playGameEnd();
-      }
-      if(response.body.isCheck) {
-        let activePlayer = whoseMoveIsThere(FEN);
-        if (activePlayer === 'b') {
-          setIsBlackChecked(true);
-        } else {
-          setIsWhiteChecked(true);
-        }
-      } else {
-        setIsBlackChecked(false);
-        setIsWhiteChecked(false);
-      }
-      setFEN(FEN);
-      console.log(previousMove)
-      setPreviousMove(previousMove)
-      setBoard(parseFEN(FEN));
-    });
+    //* Socket configuration
+    socket = useMemo(() => {
+      let socket = io(import.meta.env.VITE_BACKEND_URL);
+      return socket;
+    }, []);
 
-    socket.on(SOCKET_EVENTS.GAME_INITIATED, (response) => {
+  const attachListner = () =>{
+    socket.on(SOCKET_EVENTS.CHANGE, ({response}) => {
+      console.log('Recieved the feedback')
+      console.log(response)
+      let {FEN} = response.body
+      let isEmpty = FEN === "";
+      if(isEmpty){
+        console.log(previousMoves)
+        FEN = previousMoves[previousMoves.length-1];
+      };
+      const newBoard = parseFEN(FEN);
+      if(!isEmpty){
+        dispatch(setPreviousMoves({FEN}));
+        dispatch(toggleTurn());
+        dispatch(setCheck(response.body.isCheck));
+      }
+      dispatch(setBoard(newBoard));
+    });
+  }
+    const handleConnect = () =>{console.log('Socket connected Successfully');}
+    const handleDisconnect = () =>{console.log('Socket disconnected Successfully');}
+    const handleMessage = (payload) =>{console.log(payload);}
+    const handleGameStart = (response) => {
       console.log(response);
       setWaitingForAnotherPlayer(false);
       setOwner(response.message.color);
-    });
-
-    socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-      console.warn('Socket disconnected. Attempting to reconnect...');
-    });
-    socket.on(SOCKET_EVENTS.ONLINE_PLAYERS, (count)=>{
-      setOnlinePlayersCount(count);
-    })
-
-    return socket;
-  }, []);
-
+    }
+    useEffect(()=>{
+      socket.on(SOCKET_EVENTS.CONNECT, handleConnect);
+      socket.on(SOCKET_EVENTS.MESSAGE, handleMessage);
+      socket.on(SOCKET_EVENTS.GAME_INITIATED, handleGameStart);
+      socket.on(SOCKET_EVENTS.DISCONNECT, handleDisconnect);
+      socket.on(SOCKET_EVENTS.ONLINE_PLAYERS, (count)=>{
+        setOnlinePlayersCount(count);
+      })
+    attachListner();
+    return ()=>{
+      socket.off(SOCKET_EVENTS.CHANGE);
+      socket.off(SOCKET_EVENTS.CONNECT);
+      socket.off(SOCKET_EVENTS.MESSAGE);
+      socket.off(SOCKET_EVENTS.GAME_INITIATED);
+      socket.off(SOCKET_EVENTS.DISCONNECT);
+      socket.off(SOCKET_EVENTS.ONLINE_PLAYERS);
+    }
+  },[previousMoves]);
   //Cleanup of Sockets
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -82,55 +86,6 @@ const App = () => {
     };
   }, [socket]);
 
-  //* This function fetches FEN and derives whose player move is this
-  const whoseMoveIsThere = (FEN) => {
-    let move = FEN.split(' ')[1];
-    return move;
-  };
-
-  //* States Variables
-  const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2';
-  const [fen, setFEN] = useState(initialFEN);  // Corrected: useState directly
-  const [board, setBoard] = useState(parseFEN(initialFEN));
-  const [owner, setOwner] = useState("");
-  const [isWhiteChecked, setIsWhiteChecked] = useState(false);
-  const [isBlackChecked, setIsBlackChecked] = useState(false);
-  const [previousMove, setPreviousMove] = useState({fromRow: -1,fromCol: -1,toRow: -1, toCol: -1});
-  const [onlinePlayersCount, setOnlinePlayersCount] = useState(0);
-  const [waitingForAnotherPlayer, setWaitingForAnotherPlayer] = useState(false);
-
-  // Create a ref to persist the previous `fen` value
-  const fenRef = useRef(fen);
-
-  // Update `fenRef` when `fen` state changes
-  useEffect(() => {
-    fenRef.current = fen;
-  }, [fen]);
-
-  const handleFENChange = (event) => {
-    const newFEN = event.target.value;
-    setFEN(newFEN);
-    setBoard(parseFEN(newFEN)); // Update only the board state
-  };
-
-  const ExecuteMove = (fromRow, fromCol, toRow, toCol) => {
-    let fromFile = String.fromCharCode('a'.charCodeAt(0) + fromCol);
-    let fromNumber = 8 - fromRow;
-    let toFile = String.fromCharCode('a'.charCodeAt(0) + toCol);
-    let toNumber = 8 - toRow;
-    let from = fromFile + fromNumber;
-    let to = toFile + toNumber;
-    socket.emit('move', { from: from, to: to });
-  };
-
-  const handlePieceMove = (fromRow, fromCol, toRow, toCol) => {
-    ExecuteMove(fromRow, fromCol, toRow, toCol);
-    const newBoard = board.map((row) => [...row]); // Create a deep copy
-    const piece = newBoard[fromRow][fromCol];
-    newBoard[fromRow][fromCol] = null; // Clear the original square
-    newBoard[toRow][toCol] = piece; // Move the piece to the new square
-    setBoard(newBoard);
-  };
 
   const startGame = useCallback(() => {
     try {
@@ -146,12 +101,8 @@ const App = () => {
     <div className="flex flex-col sm:flex-row sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4">
       <ChessBoard
         owner={owner}
-        board={board}
-        setBoard={setBoard}
         isBlackChecked={isBlackChecked}
         isWhiteChecked={isWhiteChecked}
-        onPieceMove={handlePieceMove}
-        previousMove={previousMove}
       />
       <GameControllers online={onlinePlayersCount} isWaiting={waitingForAnotherPlayer} onStart={startGame}/>
     </div>
@@ -159,9 +110,11 @@ const App = () => {
 };
 
 function GameControllers({online,isWaiting,onStart}){
+  const isWhitesTurn = useSelector((state)=>state.board.isWhitesTurn);
   return (
     <div className="h-[600px] w-[380px] bg-[#262521] rounded-sm flex flex-col mt-0 p-4 gap-6 items-center justify-between">
       <OnlineCouner online={online}/>
+      <p>{`It's ${isWhitesTurn?'White':'Black'} turn`}</p>
       <Button text={isWaiting?"Waiting...":"Start game"} disabled={isWaiting?true:false} onClick={onStart} />
     </div>
   )
@@ -175,4 +128,5 @@ function OnlineCouner({online}){
     </div>
   )
 }
+export {socket};
 export default App;

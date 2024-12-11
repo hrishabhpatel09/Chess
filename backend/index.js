@@ -75,6 +75,7 @@ io.on('connection', (socket)=>{
     io.emit("online",onlinePlayers);
     console.log('new Socket connected ', socket.id);
     socket.on('start_game',(payload)=>{
+        console.log(queue)
         if (queue.length === 0) {
             queue.push(socket.id);
             socket.emit('start_game_response',new Response(true, 'Waiting for another player to join',false,false,false,""));
