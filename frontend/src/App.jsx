@@ -7,6 +7,7 @@ import onlineDot from "/online.png"
 import { useDispatch, useSelector } from "react-redux";
 import {setBoard, setPreviousMoves, toggleTurn, setCheck} from "./redux/boardSlice.js";
 import {parseFEN} from "./utils/parseFEN.js"
+import Navbar from "./Components/Navbar.jsx";
 
 let socket = null;
 const App = () => {
@@ -98,7 +99,8 @@ const App = () => {
   },[]);
 
   return (
-    <div className="flex flex-col sm:flex-row sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4">
+    <div className="flex flex-col sm:flex-row sm:mt-0 sm:justify-evenly justify-center items-center w-screen h-screen space-y-4 relative pt-24">
+      <Navbar/>
       <ChessBoard
         owner={owner}
         isBlackChecked={isBlackChecked}
