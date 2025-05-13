@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getPossibleMoves } from "../utils/Validation.js";
 
 const initialState = {
     board: [
@@ -17,6 +18,8 @@ const initialState = {
     isCheckmate: false,
     isStalemate: false,
     isDraw: false,
+    activeCell: null,
+    possibleMoves: []
 };
 const boardSlice = createSlice({
     name: 'board',
@@ -29,10 +32,14 @@ const boardSlice = createSlice({
             newBoard[toRow][toCol] = newBoard[fromRow][fromCol];
             newBoard[fromRow][fromCol] = null;
             state.board = newBoard;
+            state.activeCell = null;
+            state.possibleMoves = [];
             return state;
         },
         setBoard: (state, action) => {
             state.board = action.payload;
+            state.activeCell = null;
+            state.possibleMoves = [];
             return state;
         },
         setPreviousMoves: (state, action) => {
@@ -45,10 +52,44 @@ const boardSlice = createSlice({
         },
         toggleTurn: (state) => {
             state.isWhitesTurn = !(state.isWhitesTurn);
+            state.activeCell = null;
+            state.possibleMoves = [];
             return state;
+        },
+        setActiveCell: (state, action) => {
+            const { row, col } = action.payload;
+            
+            // If clicking on the same square, clear selection
+            if (state.activeCell && state.activeCell.row === row && state.activeCell.col === col) {
+                state.activeCell = null;
+                state.possibleMoves = [];
+                return;
+            }
+            
+            const piece = state.board[row][col];
+            
+            // Only allow selecting pieces of the current player's color
+            if (piece) {
+                const isPieceWhite = piece === piece.toUpperCase();
+                if (isPieceWhite === state.isWhitesTurn) {
+                    state.activeCell = { row, col };
+                    // Calculate possible moves for the selected piece
+                    state.possibleMoves = getPossibleMoves(row, col, state.board);
+                } else {
+                    state.activeCell = null;
+                    state.possibleMoves = [];
+                }
+            } else {
+                state.activeCell = null;
+                state.possibleMoves = [];
+            }
+        },
+        clearSelection: (state) => {
+            state.activeCell = null;
+            state.possibleMoves = [];
         }
     }
 });
 
-export const { movePiece, setBoard, setPreviousMoves, setCheck, toggleTurn} = boardSlice.actions;
+export const { movePiece, setBoard, setPreviousMoves, setCheck, toggleTurn, setActiveCell, clearSelection } = boardSlice.actions;
 export default boardSlice.reducer;
